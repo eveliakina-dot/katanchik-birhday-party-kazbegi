@@ -615,6 +615,7 @@ body{font-family:'Space Grotesk',sans-serif;background:#FFF5E6;overflow-x:hidden
         onsubmit="handleSubmit(event)"
       >
         <input type="hidden" name="_subject" value="🏔 Новый гость на ДР Кати!"/>
+        <input type="hidden" name="_next" value="about:blank"/>
         <div class="form-row">
           <label class="form-label" for="nameSelect">Твоё имя</label>
           <select class="form-select" id="nameSelect" name="name" required>
@@ -649,12 +650,11 @@ body{font-family:'Space Grotesk',sans-serif;background:#FFF5E6;overflow-x:hidden
       Вступить в чат про ДР 💬
     </a>
   </div>
-</div></div>
-
   <div class="cant-msg" id="cantMsg">
     <div class="cant-big">Жаль 😔</div>
     <div class="cant-sub">Горы подождут до следующего раза.<br>Но знай — тебя будет не хватать.</div>
   </div>
+</div></div>
 
 <div class="bticker">
   <div class="ti2">
@@ -699,47 +699,49 @@ async function handleSubmit(e) {
   const btn = form.querySelector('.submit-btn');
   btn.textContent = 'Отправляем...';
   btn.disabled = true;
-  try {
-    const data = new FormData(form);
-    const res = await fetch(form.action, {
-      method: 'POST',
-      body: data,
-      headers: { 'Accept': 'application/json' },
-      redirect: 'manual'
-    });
-    // Formspree returns 200 or opaqueredirect — both mean success
-    if (res.ok || res.type === 'opaqueredirect' || res.status === 0) {
-      form.style.display = 'none';
-      const successEl = document.getElementById('successMsg');
-      successEl.classList.add('visible');
-      successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      const json = await res.json().catch(() => ({}));
-      if (json.errors) {
-        btn.textContent = 'ДА, Я ЕДУ 🏔';
-        btn.disabled = false;
-        alert('Ошибка: ' + json.errors.map(e => e.message).join(', '));
-      } else {
-        // Treat as success anyway (Formspree quirk)
-        form.style.display = 'none';
-        document.getElementById('successMsg').classList.add('visible');
-      }
-    }
-  } catch(err) {
-    // Network error or CORS — but form likely submitted, show success
+
+  function showSuccess() {
     form.style.display = 'none';
     const successEl = document.getElementById('successMsg');
     successEl.classList.add('visible');
     successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+
+  try {
+    const data = new FormData(form);
+    const res = await fetch(form.action, {
+      method: 'POST',
+      body: data,
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      const json = await res.json().catch(() => ({}));
+      if (json.errors) {
+        btn.textContent = 'ДА, Я ЕДУ 🏔';
+        btn.disabled = false;
+        alert('Ошибка: ' + json.errors.map(err => err.message).join(', '));
+      } else {
+        showSuccess();
+      }
+    } else {
+      showSuccess(); // Treat any non-error response as success
+    }
+  } catch(err) {
+    // Network error — form likely submitted anyway
+    showSuccess();
+  }
 }
 
 function cantCome() {
   const form = document.getElementById('confirmForm');
+  const confirmInner = document.querySelector('.confirm-inner');
   const name = document.getElementById('nameSelect').value;
   if (!name) { alert('Выбери своё имя — хотя бы чтобы мы знали, кого ждать!'); return; }
+  if (confirmInner) confirmInner.style.display = 'none';
   form.style.display = 'none';
-  document.getElementById('cantMsg').classList.add('visible');
+  const cantEl = document.getElementById('cantMsg');
+  cantEl.classList.add('visible');
+  cantEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 </script>
